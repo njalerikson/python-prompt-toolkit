@@ -233,20 +233,31 @@ class TimeLeft(Formatter):
     template = '<time-left>{time_left}</time-left>'
     unknown = '?:??:??'
 
+    def __init__(self, show_elapsed: bool = False) -> None:
+        self.show_elapsed = show_elapsed
+
     def format(self, progress_bar: 'ProgressBar',
                progress: 'ProgressBarCounter[object]',
                width: int) -> AnyFormattedText:
 
         time_left = progress.time_left
         if time_left is not None:
-            formatted_time_left = _format_timedelta(time_left)
+            # if we want to display the elapsed time and counter has completed
+            if progress.done and self.show_elapsed:
+                formatted_time_left = _format_timedelta(progress.time_elapsed)
+            else:
+                formatted_time_left = _format_timedelta(time_left)
         else:
             formatted_time_left = self.unknown
 
         return HTML(self.template).format(time_left=formatted_time_left.rjust(width))
 
     def get_width(self, progress_bar: 'ProgressBar') -> AnyDimension:
-        all_values = [len(_format_timedelta(c.time_left)) if c.time_left is not None else 7
+        all_values = [len(_format_timedelta(c.time_elapsed
+                                            if c.done and self.show_elapsed
+                                            else c.time_left))
+                      if c.time_left is not None
+                      else 7
                       for c in progress_bar.counters]
         if all_values:
             return max(all_values)
